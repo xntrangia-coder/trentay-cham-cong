@@ -1,0 +1,7 @@
+.wrangler/
+node_modules/
+anh-chup/
+sao-luu/
+*.log
+.env
+.dev.vars

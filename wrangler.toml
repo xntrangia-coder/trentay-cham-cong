@@ -1,0 +1,14 @@
+name = "trentay-cham-cong"
+pages_build_output_dir = "public"
+# Ghim cứng: workerd đi kèm wrangler trên máy chỉ hiểu tới 2026-07-08.
+compatibility_date = "2026-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trentay-cham-cong"
+database_id = "00000000-0000-0000-0000-000000000000"  # chạy thử trên máy; nút cài trên GitHub tự ghi id thật
+
+# Ảnh xác nhận vào R2 (bật R2 trên tài khoản rồi bỏ dấu # — xem HUONG-DAN mục "Ảnh xác nhận sang R2"):
+# [[r2_buckets]]
+# binding = "ANH"
+# bucket_name = "trentay-cham-cong-anh"

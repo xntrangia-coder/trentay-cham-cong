@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bản đồ lộ trình — TRENTAY Chấm Công</title>
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .bd-top{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--the,#fff);border-bottom:1px solid var(--vien,#e5e7eb);flex-wrap:wrap}
+  .bd-top h1{font-size:17px;margin:0;flex:1}
+  .bd-tab{display:flex;gap:6px}
+  .bd-tab button{padding:7px 14px;border:1px solid var(--vien,#e5e7eb);background:var(--nen,#f6f7f9);border-radius:999px;cursor:pointer;font-size:14px}
+  .bd-tab button.on{background:var(--chinh,#2563eb);color:#fff;border-color:transparent}
+  .bd-than{display:flex;height:calc(100vh - 56px)}
+  .bd-ben{width:300px;max-width:42vw;overflow:auto;border-right:1px solid var(--vien,#e5e7eb);padding:12px}
+  #map{flex:1}
+  .nguoi{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--vien,#e5e7eb);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--the,#fff)}
+  .nguoi:hover{border-color:var(--chinh,#2563eb)}
+  .nguoi .cham-xanh{width:10px;height:10px;border-radius:50%;background:#16a34a;flex:none;box-shadow:0 0 0 4px rgba(22,163,74,.18)}
+  .nguoi b{display:block;font-size:14px}
+  .nguoi small{color:var(--mo,#6b7280)}
+  .dieu{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .dieu select,.dieu input{padding:9px;border:1px solid var(--vien,#e5e7eb);border-radius:10px;font-size:14px;width:100%}
+  .tt-dong{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--vien,#eee);font-size:14px}
+  .tt-dong b{color:var(--chinh,#2563eb)}
+  .nhip{font-size:12px;color:var(--mo,#6b7280);margin-top:4px}
+  .ghe-pin{background:#f59e0b;color:#fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:26px;height:26px;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .ghe-pin span{transform:rotate(45deg);font-size:13px}
+  .giua-man{display:grid;place-items:center;height:70vh;text-align:center;padding:20px}
+  @media(max-width:640px){.bd-than{flex-direction:column;height:auto}.bd-ben{width:auto;max-width:none;border-right:0;border-bottom:1px solid var(--vien,#e5e7eb)}#map{height:60vh}}
+</style>
+</head>
+<body>
+<div id="goc"><div class="giua-man"><p>…</p></div></div>
+<script src="/vendor/leaflet.js"></script>
+<script src="/i18n.js"></script>
+<script src="/ban-do.js"></script>
+</body>
+</html>

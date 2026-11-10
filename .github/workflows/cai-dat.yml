@@ -1,0 +1,107 @@
+# Nút cài / cập nhật TRENTAY Chấm Công lên tài khoản Cloudflare CỦA BẠN.
+# Cần 2 Secrets trong kho (Settings → Secrets and variables → Actions): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
+# Chạy: tab Actions → «Cài đặt / Cập nhật» → Run workflow. Chạy lại bao nhiêu lần cũng được: dữ liệu giữ nguyên,
+# chỉ chạy thêm các tệp di trú (di-tru/*.sql) chưa chạy.
+name: Cài đặt / Cập nhật
+
+on:
+  workflow_dispatch:
+    inputs:
+      ten_app:
+        description: "Tên app (chữ thường, số, gạch nối) — thành địa chỉ <tên>.pages.dev. Để trống = cham-cong-<tên tài khoản GitHub>"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cai-dat
+  cancel-in-progress: false
+
+jobs:
+  cai-dat:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WR: npx --yes wrangler@4.107.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Kiểm tra Secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Thiếu CLOUDFLARE_API_TOKEN hoặc CLOUDFLARE_ACCOUNT_ID trong Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Đặt tên app
+        id: ten
+        run: |
+          TEN="${{ github.event.inputs.ten_app }}"
+          if [ -z "$TEN" ]; then TEN="cham-cong-${{ github.repository_owner }}"; fi
+          TEN=$(echo "$TEN" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//' | cut -c1-50)
+          echo "ten=$TEN" >> "$GITHUB_OUTPUT"
+          echo "Tên app: $TEN"
+
+      - name: Tạo hoặc tìm CSDL D1
+        id: d1
+        run: |
+          TEN="${{ steps.ten.outputs.ten }}"
+          ID=$($WR d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).find(x=>x.name===process.argv[1]);console.log(t?t.uuid:"")})' "$TEN")
+          MOI=0
+          if [ -z "$ID" ]; then
+            $WR d1 create "$TEN" --location apac
+            ID=$($WR d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s).find(x=>x.name===process.argv[1]);console.log(t?t.uuid:"")})' "$TEN")
+            MOI=1
+          fi
+          if [ -z "$ID" ]; then echo "::error::Không tạo được CSDL D1 — kiểm quyền API Token (D1: Edit)."; exit 1; fi
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+          echo "moi=$MOI" >> "$GITHUB_OUTPUT"
+          # wrangler.toml dựng lại mỗi lượt theo tài khoản của BẠN (bản trong kho chỉ để chạy thử trên máy).
+          cat > wrangler.toml <<TOML
+          name = "$TEN"
+          pages_build_output_dir = "public"
+          compatibility_date = "2026-07-01"
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "$TEN"
+          database_id = "$ID"
+          TOML
+          sed -i 's/^          //' wrangler.toml
+          cat wrangler.toml
+
+      - name: Dựng bảng / chạy di trú còn thiếu
+        run: |
+          TEN="${{ steps.ten.outputs.ten }}"
+          q() { $WR d1 execute "$TEN" --remote --json --command "$1"; }
+          q "CREATE TABLE IF NOT EXISTS _di_tru (ten TEXT PRIMARY KEY, luc INTEGER NOT NULL)" > /dev/null
+          CO_BANG=$(q "SELECT COUNT(*) AS so FROM sqlite_master WHERE type='table' AND name='doanh_nghiep'" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].results[0].so))')
+          if [ "$CO_BANG" = "0" ]; then
+            echo "CSDL mới → dựng toàn bộ từ schema.sql"
+            $WR d1 execute "$TEN" --remote --file schema.sql -y
+            for f in $(ls di-tru/*.sql | sort); do q "INSERT OR IGNORE INTO _di_tru VALUES ('$(basename $f)', $(date +%s))" > /dev/null; done
+          else
+            for f in $(ls di-tru/*.sql | sort); do
+              DA=$(q "SELECT COUNT(*) AS so FROM _di_tru WHERE ten='$(basename $f)'" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].results[0].so))')
+              if [ "$DA" = "0" ]; then
+                echo "Chạy di trú $f"
+                $WR d1 execute "$TEN" --remote --file "$f" -y
+                q "INSERT INTO _di_tru VALUES ('$(basename $f)', $(date +%s))" > /dev/null
+              fi
+            done
+          fi
+
+      - name: Đưa app lên Cloudflare Pages
+        id: day
+        run: |
+          TEN="${{ steps.ten.outputs.ten }}"
+          $WR pages project create "$TEN" --production-branch main 2>/dev/null || echo "Dự án Pages đã có."
+          $WR pages deploy public --project-name "$TEN" --branch main --commit-dirty=true
+          echo "### ✅ Xong — mở app: https://$TEN.pages.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "Lần đầu: bấm «Chủ doanh nghiệp chưa có tài khoản? Đăng ký» để tạo tài khoản quản trị." >> "$GITHUB_STEP_SUMMARY"
